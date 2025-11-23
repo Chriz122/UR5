@@ -15,7 +15,7 @@
 ### 2. 視覺處理 (`function_intelFORyolo.py`, `orchid_pose_d435.py`)
 - 使用 Intel RealSense D435i 相機獲取彩色和深度影像
 - 實現影像對齊和深度數據處理
-- 蘭花姿態估計和葉片數量檢測
+- 蘭花姿態估計
 - 顏色識別和區域分割
 
 ### 3. 校準系統 (`UR5_calibration.py`, `find_WORLD.py`)
@@ -47,11 +47,11 @@ P_robot = T_eye_to_hand * P_camera
 其中：
 - P_robot: 機器人基座標系中的點
 - P_camera: 相機座標系中的點
-- T_eye_to_hand: 4x4 轉移矩陣
+- T_eye_to_hand: 11*12 轉移矩陣
 
 校準過程使用 Tsai 的方法，通過最小二乘法優化轉移矩陣參數。
 
-### 2. 深度影像處理
+### 2. 深度影像處理 (未直接使用RealSense 內建3D 座標轉換)
 
 Intel RealSense D435i 提供 RGB-D 數據，系統使用以下技術處理深度資訊：
 
