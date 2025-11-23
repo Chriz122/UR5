@@ -1,27 +1,27 @@
 import urx
 import socket
 from math import *
-import threading
+# import threading
 import function_intelFORyolo as f_intel
 import os
 import cv2
 from function_arm import rv2rpy
 import function_arm as f_arm
 import numpy as np
-import random
+# import random
 from find_WORLD import find_WORLD_eyetohand
 import os
 import cv2
 import csv
-import math
+# import math
 import time
-from ultralytics import YOLO
+# from ultralytics import YOLO
 
 from algorithm.ant import create_distance_matrix, ant_colony_optimization
 from orchid_pose_d435 import orchid_pose_seg_area_leafs_number_predict_d435, orchid_pose_seg_area_leafs_number_predict_d435_new
 
 
-# TODO: 將ASCII改ord('')，l功能可以拔掉
+# TODO: 將ASCII改ord('')，l key功能可以拔掉
 # NOTE: Q:開始, x:拍照, X:紀錄當前座標
 
 #-16.6151988924574	-1.35365000913771	0.581205593619286	-41.9357365124314
