@@ -91,13 +91,13 @@ P_ij = (τ_ij^α * η_ij^β) / Σ(τ_ik^α * η_ik^β)
 
 ```
 UR5/
+├── a20241107a(未整合的校正腳本) # 未整合的校正腳本
 ├── requirement.txt          # Python 依賴包列表
 ├── data/                    # 數據儲存目錄
 │   ├── images/             # 校準影像
 │   └── txts/               # 深度數據和姿態數據
 ├── models/                 # 訓練好的模型文件
 └── src/                    # 源代碼
-    ├── calculate_transition_matrix.py  # 轉移矩陣計算（空文件）
     ├── find_WORLD.py       # 世界座標檢測
     ├── function_arm.py     # 機器人控制函數
     ├── function_intelFORyolo.py  # Intel 相機處理
@@ -128,7 +128,7 @@ python src/UR5_calibration.py
 1. 移動機器人到不同位置
 2. 按 'x' 鍵拍攝棋盤格影像
 3. 收集足夠的校準數據點
-4. 計算轉移矩陣
+4. 計算轉移矩陣 (使用a20241107a(未整合的校正程式))
 
 ### 3. 物體檢測和抓取
 
