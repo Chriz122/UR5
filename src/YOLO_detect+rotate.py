@@ -11,11 +11,9 @@ import urx
 from urx.urrobot import RobotException
 import socket
 from math import *
-import function_intelFORyolo as f_intel
 import os
 import cv2
-from function_arm import rv2rpy
-import function_arm as f_arm
+from function_arm import rv2rpy, arm_movej
 import numpy as np
 from find_WORLD import find_WORLD_eyetohand
 import os
@@ -38,6 +36,9 @@ C44_eyetohand4 = np.array([[-16.6358891363565,-1.25258697737028,0.55632225064077
                 [-0.180824295282988,0.109614597224694,-1.05654307600949,1181.95724761074],
                 [0, 0, 0, 1]]) # D435i 轉移矩陣 eye to hand
 
+POSE_MODEL = "models/best_all_0_degree_small.v2i.v11l_pose.pt"
+SEG_MODEL = "models/best_Yat-sen_University_orchid-idea.v7i.v11s_seg.pt"
+                
 def OPEN():
     s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     s.connect(("192.168.1.101",30001))
@@ -135,19 +136,6 @@ align = rs.align(align_to)
 temp=1 #從多少開始
 # Streaming loop
 
-skeleton = [[2, 1], [3, 1], [4, 1], [5, 1]]
-
-pose_palette = np.array([[255, 128, 0], [255, 153, 51], [255, 178, 102], [230, 230, 0], [255, 153, 255],
-                         [153, 204, 255], [255, 102, 255], [255, 51, 255], [102, 178, 255], [51, 153, 255],
-                         [255, 153, 153], [255, 102, 102], [255, 51, 51], [153, 255, 153], [102, 255, 102],
-                         [51, 255, 51], [255, 255, 255], [0, 0, 255], [255, 0, 0], [255, 255, 255]],dtype=np.uint8)
-
-# kpt_color  = pose_palette[[16, 16, 16, 16, 16, 0, 0, 0, 0, 0, 0, 9, 9, 9, 9, 9, 9]]
-
-kpt_color  = pose_palette[[10, 0, 9, 7, 16]]
-
-limb_color = pose_palette[[9, 9, 9, 9, 7, 7, 7, 0, 0, 0, 0, 0, 16, 16, 16, 16, 16, 16, 16]]
-
 DIR_NAME = time.strftime("%Y%m%d_%H%M%S")
 predict_pose_number = 1
 
@@ -188,7 +176,7 @@ try:
             # depth_image[depth_image!=0]=depth_image[depth_image!=0]%200+55
             
             dc_images = np.hstack((color_image, colorized_depth))
-            cv2.imshow('AD', dc_images)         
+            cv2.imshow('image and depth', dc_images)         
 
             if key & 0xFF == ord('J'):#按鍵J
                 C=10/1000
@@ -199,10 +187,7 @@ try:
             if key & 0xFF == ord('L'):#按鍵L
                 C=0.1/1000
                 print(0.1)
-            
-            #面朝右角度2.4184,2.4184,-2.4184   
-            #面朝前角度0,2.2214,-2.2214
-            
+                       
             if key & 0xFF == ord('x'): # 純拍照
                 
                 posel = rob.getl()
@@ -324,39 +309,21 @@ try:
                 print('LEFT: ', LEFT)
                 
             if (key & 0xFF == ord('q')) or (key & 0xFF == ord('Q')): 
-                f_arm.arm_movej((radians(-90.07),
-                                  radians(-70.8),
-                                  radians(-78.95),             # 負的向下
-                                  radians(-120.25),
-                                  radians(90),
-                                  radians(0.39)),acc,vel)  #校正角度
+                arm_movej((radians(-90.07),
+                            radians(-70.8),
+                            radians(-78.95),             # 負的向下
+                            radians(-120.25),
+                            radians(90),
+                            radians(0.39)),acc,vel)  #校正角度
                 pose = rob.getl()
                 print(pose[0],pose[1],pose[2])
                 print("read pose")
-                               
-            if key & 0xFF == ord('o'):
-                X,Y,Z,ppp,kind=f_intel.getXYZT(color_image,depth_image)
-                if len(kind) != 0:
-                    pose=f_arm.arm_getl()
-                    f_arm.arm(X,Y,Z,kind,pose,acc,vel)
-                    
-                    num=len(kind)
-                    for a in range(num):
-                        rob.movel_tool((X[a],Y[a],Z[a],0,0,0),acc,vel)
-                        time.sleep(1)
-                        rob.movel_tool((-X[a],-Y[a],-Z[a],0,0,0),acc,vel)
-                        time.sleep(1)
-                        
+                                                    
             if key & 0xFF == ord('p'):
                 X, Y, W, H = 86, 41, 386, 436
                 # roi = color_image[Y:Y+H, X:X+W]
-                pose_model_name = "models/best_all_0_degree_small.v2i.v11l_pose.pt"
-                seg_model_name = "models/best_Yat-sen_University_orchid-idea.v7i.v11s_seg.pt"
-                # ALL_results_rows, img, csv_data, img_name, predict_time, angle_time = orchid_pose_predict_d435(color_image, depth_image, pose_model_name, predict_pose_number)
-                # ALL_results_rows, img, csv_data, img_name, predict_time, angle_time, seg_time = orchid_pose_seg_area_leafs_number_predict_d435(color_image, depth_image, pose_model_name, seg_model_name, 
-                #                                                                                                                                predict_pose_number)
                 
-                ALL_results_rows, img, csv_data, img_name, predict_time, angle_time, seg_time = orchid_pose_seg_area_leafs_number_predict_d435_new(color_image, depth_image, pose_model_name, seg_model_name, 
+                ALL_results_rows, img, csv_data, img_name, predict_time, angle_time, seg_time = orchid_pose_seg_area_leafs_number_predict_d435_new(color_image, depth_image, POSE_MODEL, SEG_MODEL, 
                                                                                                                                                predict_pose_number)
                 
                 if ALL_results_rows is None or len(ALL_results_rows) == 0:
@@ -517,12 +484,12 @@ try:
                     print(f"CSV file 'keypoints_data_{str(predict_pose_number)}.csv' has been saved.")
                     #--------------------------------------------------------------------------  
                     
-                    f_arm.arm_movej((radians(-90.07),
-                                      radians(-70.8),
-                                      radians(-78.95),             # 負的向下
-                                      radians(-120.25),
-                                      radians(90),
-                                      radians(0.39)),acc,vel)  #校正角度
+                    arm_movej((radians(-90.07),
+                                radians(-70.8),
+                                radians(-78.95),             # 負的向下
+                                radians(-120.25),
+                                radians(90),
+                                radians(0.39)),acc,vel)  #校正角度
                     
                     time.sleep(1)
                                   

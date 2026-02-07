@@ -13,7 +13,8 @@ def distance(point1, point2):
 
 def check_point_to_points(point1, points, point_l, point_r):
     # 檢查point1與points中嵌套的每個點之間的距離
-    DIS = distance(point1, point_l); DIS2 = distance(point1, point_r);
+    DIS = distance(point1, point_l)
+    DIS2 = distance(point1, point_r)
     for point_info in points:
         point = point_info[0]  # 獲取每個子列表中的點
         if distance(point1, point) <= DIS and distance(point1, point) <= DIS2:
