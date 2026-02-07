@@ -38,7 +38,7 @@ C44_eyetohand4 = np.array([[-16.6358891363565,-1.25258697737028,0.55632225064077
 
 POSE_MODEL = "models/best_all_0_degree_small.v2i.v11l_pose.pt"
 SEG_MODEL = "models/best_Yat-sen_University_orchid-idea.v7i.v11s_seg.pt"
-                
+  
 def OPEN():
     s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     s.connect(("192.168.1.101",30001))
@@ -319,10 +319,7 @@ try:
                 print(pose[0],pose[1],pose[2])
                 print("read pose")
                                                     
-            if key & 0xFF == ord('p'):
-                X, Y, W, H = 86, 41, 386, 436
-                # roi = color_image[Y:Y+H, X:X+W]
-                
+            if key & 0xFF == ord('p'):                
                 ALL_results_rows, img, csv_data, img_name, predict_time, angle_time, seg_time = orchid_pose_seg_area_leafs_number_predict_d435_new(color_image, depth_image, POSE_MODEL, SEG_MODEL, 
                                                                                                                                                predict_pose_number)
                 
@@ -469,20 +466,6 @@ try:
                                 posel_R2 = rob.getl()
                                 rob.movel((B_temp[0], B_temp[1], 0.484763, posel_R2[3], posel_R2[4], posel_R2[5]), 1, 0.1)
                                 rob.movel((B_temp[0], B_temp[1], 0.484763, 0, 3.1271, 0), 1, 0.1)
-                        
-                    #--------------------------------------------------------------------------    
-                    # Write data to CSV file 轉前csv
-                    with open("data/" + DIR_NAME + "/" + "Before_keypoints_data_" + str(predict_pose_number) + ".csv", mode="w", newline="") as csvfile:
-                        csv_writer = csv.writer(csvfile)
-                        csv_writer.writerows(csv_data)
-                        
-                    
-                    # Display the annotated frame
-                    # cv2.imshow("windows_name", img)  
-                    # cv2.imwrite("After_" + str(predict_pose_number) + ".jpg", color_image) # 轉後原圖
-                    print("save done") 
-                    print(f"CSV file 'keypoints_data_{str(predict_pose_number)}.csv' has been saved.")
-                    #--------------------------------------------------------------------------  
                     
                     arm_movej((radians(-90.07),
                                 radians(-70.8),
@@ -494,35 +477,6 @@ try:
                     time.sleep(1)
                                   
                     predict_pose_number += 1
-                    #'''
-            if key & 0xFF == ord('b'):
-                #========================================================================== 轉後辨識  
-                
-                cv2.imwrite("data/" + DIR_NAME + "/" + "After_" + str(predict_pose_number-1) + ".jpg", color_image_copy) # 轉後原圖
-                
-                pose_model_name = "best_all_0_degree_small.v2i.v11s-BiFPN_pose.pt"
-                seg_model_name = "best_Yat-sen_University_orchid-idea.v7i.v11s_seg.pt"
-                
-                ALL_results_rows2, img2, csv_data2, img_name2, predict_time2, angle_time2, seg_time2 = orchid_pose_seg_area_leafs_number_predict_d435_new(color_image, depth_image, pose_model_name, seg_model_name, predict_pose_number)
-                
-                if ALL_results_rows2 is None or len(ALL_results_rows2) == 0:
-                    print("No valid pose data detected.")
-                    
-                else:   
-                    # Write data to CSV file 轉後csv
-                    with open("data/" + DIR_NAME + "/" + "After_keypoints_data_" + str(predict_pose_number-1) + ".csv", mode="w", newline="") as csvfile2:
-                        csv_writer = csv.writer(csvfile2)
-                        csv_writer.writerows(csv_data2)
-                        
-                    
-                    # Display the annotated frame
-                    # cv2.imshow("windows_name", img)
-                    cv2.imwrite("data/" + DIR_NAME + "/" + "After_predict" + str(predict_pose_number-1) + ".jpg", img2) # 轉後辯識圖
-                    print("save done") 
-                    print(f"CSV file 'keypoints_data_{str(predict_pose_number)}.csv' has been saved.")
-                
-                
-                #==========================================================================
 
             if key == 27: #按下 Esc 關閉視窗
                 cv2.destroyAllWindows()
