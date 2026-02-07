@@ -1,7 +1,5 @@
-# import glob
 import cv2
 import numpy as np
-# import math
 
 def find_WORLD(w, h, Chessboard, Chessboard_depth):
 

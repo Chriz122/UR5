@@ -1,14 +1,11 @@
 import time
 import cv2
-# import csv
 import math
-# import random
-# import threading
 import numpy as np
 from ultralytics import YOLO
 
 from angle import *
-from orchid_seg import orchid_seg_predict_block, orchid_seg_leafs_number_predict_block, orchid_seg_leafs_number_predict_block2
+from orchid_seg import orchid_seg_predict_block, orchid_seg_leafs_number_predict_block2
 
 def distance(point1, point2):
     # 計算兩點之間的歐幾里得距離
