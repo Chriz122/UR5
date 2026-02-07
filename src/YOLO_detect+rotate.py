@@ -69,7 +69,6 @@ def CLOSE(width):
     text = []
     for line in f:
         if "rq_set_pos_norm(100, " in line: # 8.5cm = 0.085 m
-            # pos = abs(round(width/0.00085) - 100)
             pos = abs(round((width)/0.00085) - 100)
             line = "    rq_set_pos_norm(" + str(pos) + ', "1")\n'
             text.append(line)
@@ -114,8 +113,8 @@ MOVE = 0
 # Create a pipeline
 pipeline = rs.pipeline()
 
-#Create a config and configure the pipeline to stream
-#  different resolutions of color and depth streams
+# Create a config and configure the pipeline to stream
+# different resolutions of color and depth streams
 config = rs.config()
 config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
 config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
@@ -127,7 +126,6 @@ profile = pipeline.start(config)
 depth_sensor = profile.get_device().first_depth_sensor()
 depth_scale = depth_sensor.get_depth_scale()
 print("Depth Scale is: " , depth_scale)
-
 
 # Create an align object
 # rs.align allows us to perform alignment of depth frames to others frames
@@ -328,7 +326,6 @@ try:
                     print("No valid pose data detected.")
                     
                 else:  
-                    cv2.imwrite("data/" + DIR_NAME + "/" + "Before_" + str(predict_pose_number) + ".jpg", color_image_copy) # 轉前原圖
                     csv_data.append([])
                     csv_data.append(["Predict-time(sec):", predict_time])
                     csv_data.append(["Angle-time(sec):", angle_time])
