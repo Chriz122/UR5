@@ -1,4 +1,7 @@
-# *.pt
-# *.onnx
-# *.csv
-# *.jpg
+.venv
+__pycache__
+*.__pycache__
+*.pyc
+
+.txt
+.png

@@ -1,7 +1,9 @@
 import cv2
 
+global num
+num = 1
+
 def save_pic(img,string):
-    global num,f
     num += 1
     name = "data/images/" + string + str(num) + ".png"
     cv2.imwrite(name, img)

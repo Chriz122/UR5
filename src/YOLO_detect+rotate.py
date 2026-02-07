@@ -1,4 +1,14 @@
+import sys
+import os
+
+# Ensure we use the virtual environment's site-packages first
+# This is necessary because the user environment has conflicting packages in ~/.local
+venv_site_packages = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.venv', 'lib', 'python3.10', 'site-packages')
+if os.path.exists(venv_site_packages):
+    sys.path.insert(0, venv_site_packages)
+
 import urx
+from urx.urrobot import RobotException
 import socket
 from math import *
 import function_intelFORyolo as f_intel
@@ -17,7 +27,7 @@ from orchid_pose_d435 import orchid_pose_seg_area_leafs_number_predict_d435_new
 import pyrealsense2 as rs
 
 
-# NOTE: Q:開始, x:拍照, X:紀錄當前座標, p:yolo_predict
+# NOTE: q/Q:開始, x:拍照, X:紀錄當前座標, p:yolo_predict
 
 #-16.6151988924574	-1.35365000913771	0.581205593619286	-41.9357365124314
 #-1.40063398542737	16.5840344888449	-0.360032069471067	-623.014017362210
@@ -32,7 +42,7 @@ def OPEN():
     s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     s.connect(("192.168.1.101",30001))
     
-    f = open(r'open.txt')
+    f = open(r'src/open.txt')
     text = []
     for line in f:
         text.append(line)
@@ -53,7 +63,7 @@ def CLOSE(width):
     s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     s.connect(("192.168.1.101", 30001))
     
-    f = open(r'close.txt')
+    f = open(r'src/close.txt')
     text = []
     for line in f:
         if "rq_set_pos_norm(100, " in line: # 8.5cm = 0.085 m
@@ -178,19 +188,15 @@ try:
             # depth_image[depth_image!=0]=depth_image[depth_image!=0]%200+55
             
             dc_images = np.hstack((color_image, colorized_depth))
-            cv2.imshow('AD', dc_images)
-            
-            # cv2.imshow('A', color_image)
-            # cv2.imshow('D', colorized_depth)
-            
+            cv2.imshow('AD', dc_images)         
 
-            if key == ord('J'):#按鍵J
+            if key & 0xFF == ord('J'):#按鍵J
                 C=10/1000
                 print(10)    
-            if key == ord('K'):#按鍵K
+            if key & 0xFF == ord('K'):#按鍵K
                 C=1/1000
                 print(1)
-            if key == ord('L'):#按鍵L
+            if key & 0xFF == ord('L'):#按鍵L
                 C=0.1/1000
                 print(0.1)
             
@@ -253,79 +259,71 @@ try:
                 print(f"RY: {posel[4]:.3f} rad, {dl4:.3f}°")
                 print(f"RZ: {posel[5]:.3f} rad, {dl5:.3f}°")
                                
-            if key == ord('f'): 
+            if key & 0xFF == ord('f'): 
                 find_WORLD_eyetohand(4, 7, 'data/' + DIR_NAME  + '/A/A' + str(temp-1) + '.png', 
                                      'data/' + DIR_NAME  + '/D/D' + str(temp-1) + '.txt')
             
-            if key == 2490368: #向上
+            if key & 0xFF == ord('8'): #向上
                 pose[2]=pose[2]+C
                 # pose=rob.getl()
-                rob.movel((pose[0],pose[1],pose[2],0, 3.1271, 0),1,0.1)
+                try:
+                    rob.movel((pose[0],pose[1],pose[2],0, 3.1271, 0),1,0.1)
+                except RobotException as e:
+                    print(f"Move failed: {e}")
                 UP += 1
                 print('UP: ', UP)
                 
-            if key == 2621440: #向下
+            if key & 0xFF == ord('2'): #向下
                 pose[2]=pose[2]-C
                 # pose=rob.getl()
-                rob.movel((pose[0],pose[1],pose[2],0, 3.1271, 0),1,0.1)
+                try:
+                    rob.movel((pose[0],pose[1],pose[2],0, 3.1271, 0),1,0.1)
+                except RobotException as e:
+                    print(f"Move failed: {e}")
                 DOWN += 1
                 print('DOWN: ', DOWN)
                 
-            if key == ord('w'): #向前
+            if key & 0xFF == ord('w'): #向前
                 pose[1]=pose[1]-C
                 # pose=rob.getl()
-                rob.movel((pose[0],pose[1],pose[2],0, 3.1271, 0),1,0.1)
+                try:
+                    rob.movel((pose[0],pose[1],pose[2],0, 3.1271, 0),1,0.1)
+                except RobotException as e:
+                    print(f"Move failed: {e}")
                 FRONT += 1
                 print('FRONT: ', FRONT)
- 
                 
-            if key == ord('s'): #向後
+            if key & 0xFF == ord('s'): #向後
                 pose[1]=pose[1]+C
                 # pose=rob.getl()
-                rob.movel((pose[0],pose[1],pose[2],0, 3.1271, 0),1,0.1)
+                try:
+                    rob.movel((pose[0],pose[1],pose[2],0, 3.1271, 0),1,0.1)
+                except RobotException as e:
+                    print(f"Move failed: {e}")
                 BACK += 1
                 print('BACK: ', BACK)
 
-                
-            if key == ord('d'): #向右
+            if key & 0xFF == ord('d'): #向右
                 pose[0]=pose[0]-C
                 # pose=rob.getl()
-                rob.movel((pose[0],pose[1],pose[2],0, 3.1271, 0),1,0.1)
+                try:
+                    rob.movel((pose[0],pose[1],pose[2],0, 3.1271, 0),1,0.1)
+                except RobotException as e:
+                    print(f"Move failed: {e}")
                 RIGHT += 1
                 print('RIGHT: ', RIGHT)
                 
-            if key == ord('a'): #向左
+            if key & 0xFF == ord('a'): #向左
                 pose[0]=pose[0]+C
                 # pose=rob.getl()
-                rob.movel((pose[0],pose[1],pose[2],0, 3.1271, 0),1,0.1)
-                LEFT += 1
+                try:
+                    rob.movel((pose[0],pose[1],pose[2],0, 3.1271, 0),1,0.1)
+                except RobotException as e:
+                    print(f"Move failed: {e}")
+                LEFT += 1   
                 print('LEFT: ', LEFT)
                 
-            if key == ord('1'): #頂部順時針轉
-                posej = rob.getj()
-                posej[5] = posej[5] + radians(90)
-                rob.movej((posej[0],
-                                  posej[1],
-                                  posej[2],
-                                  posej[3],
-                                  posej[4],
-                                  posej[5]),acc,vel)  #校正角度
-                
-                # print('LEFT: ', LEFT)
-                
-            if key == ord('2'): #頂部逆時針轉
-                posej = rob.getj()
-                posej[5] = posej[5] - radians(90)
-                rob.movej((posej[0],
-                                  posej[1],
-                                  posej[2],
-                                  posej[3],
-                                  posej[4],
-                                  posej[5]),acc,vel)  #校正角度
-                # print('LEFT: ', LEFT)
-                
-                
-            if key == ord('Q'): 
+            if (key & 0xFF == ord('q')) or (key & 0xFF == ord('Q')): 
                 f_arm.arm_movej((radians(-90.07),
                                   radians(-70.8),
                                   radians(-78.95),             # 負的向下
@@ -334,14 +332,9 @@ try:
                                   radians(0.39)),acc,vel)  #校正角度
                 pose = rob.getl()
                 print(pose[0],pose[1],pose[2])
-                
-            if key == ord('m'): # 關夾爪
-                CLOSE(0.049) # 輸入物體直徑(單位:公尺(m))
-                
-            if key == ord('n'): # 開夾爪
-                OPEN()
-                
-            if key == ord('o'):
+                print("read pose")
+                               
+            if key & 0xFF == ord('o'):
                 X,Y,Z,ppp,kind=f_intel.getXYZT(color_image,depth_image)
                 if len(kind) != 0:
                     pose=f_arm.arm_getl()
@@ -357,8 +350,8 @@ try:
             if key & 0xFF == ord('p'):
                 X, Y, W, H = 86, 41, 386, 436
                 # roi = color_image[Y:Y+H, X:X+W]
-                pose_model_name = "best_all_0_degree_small.v2i.v11l_pose.pt"
-                seg_model_name = "best_Yat-sen_University_orchid-idea.v7i.v11s_seg.pt"
+                pose_model_name = "models/best_all_0_degree_small.v2i.v11l_pose.pt"
+                seg_model_name = "models/best_Yat-sen_University_orchid-idea.v7i.v11s_seg.pt"
                 # ALL_results_rows, img, csv_data, img_name, predict_time, angle_time = orchid_pose_predict_d435(color_image, depth_image, pose_model_name, predict_pose_number)
                 # ALL_results_rows, img, csv_data, img_name, predict_time, angle_time, seg_time = orchid_pose_seg_area_leafs_number_predict_d435(color_image, depth_image, pose_model_name, seg_model_name, 
                 #                                                                                                                                predict_pose_number)
@@ -564,12 +557,10 @@ try:
                 
                 #==========================================================================
 
-            if key == 27: #Esc 關閉視窗
+            if key == 27: #按下 Esc 關閉視窗
                 cv2.destroyAllWindows()
+                rob.close()
+                sys.exit()
                 break
 finally:
     pipeline.stop()
-
- #leave some time to robot to process the setup commands
-
-#rob.movel((pose[0],pose[1],pose[2],1.0372,2.5038,-2.5038),1,0.1)
