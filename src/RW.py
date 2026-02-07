@@ -1,18 +1,19 @@
 import cv2
 
-f = open("D:\\20210514\\pic2\\num.txt",'r')
-num =int(f.read())
-f.close()
-
 def save_pic(img,string):
     global num,f
     num += 1
-    name = "D:\\20210514\\pic2\\" + string + str(num) + ".bmp"
+    name = "data/images/" + string + str(num) + ".png"
     cv2.imwrite(name, img)
-    f = open("D:\\20210514\\pic2\\num.txt",'w')
+    f = open("data/txts/num.txt",'w')
     f.write(str(num))
     f.close()
     
 def f_close():
     global f
+    f.close()
+
+if __name__ == "__main__":
+    f = open("data/txts/num.txt",'r')
+    num =int(f.read())
     f.close()

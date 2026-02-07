@@ -4,38 +4,6 @@ import time
 import pyrealsense2 as rs
 import RW
 
-### 設定變數
-refresh=True
-H = 480
-W = 640
-C44=np.array([[16.6620633415338,0.298376613722848,-0.531117011262040,21.3476678413991],\
-              [-0.287531697897276,16.7053096948173,-0.419938931526437,-82.4080705303489],\
-              [0.0915137374049609,-0.0995437023903428,1.00445065391047,-299.671628036081],\
-              [0,0,0,1]])
-STOP = False
-### ###
-
-### intel 前處理(相關設定)
-pipeline = rs.pipeline()
-config = rs.config()
-config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
-config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-profile = ''
-align_to = ''
-align = ''
-
-### ###
-
-### yolo 導入 前處理
-LABELS = open("C:/Users/Nuvo-7006DE-PoE/Desktop/tomato/tomato.names").read().strip().split("\n")
-np.random.seed(666)
-COLORS = np.random.randint(0, 255, size=(len(LABELS), 3), dtype="uint8")
-# 導入 YOLO 配置和權重文件并加載網路：
-# net = cv2.dnn_DetectionModel("C:/Users/Nuvo-7006DE-PoE/Desktop/tomato/yolov4-tiny-custom-tomato.cfg", "C:/Users/Nuvo-7006DE-PoE/Desktop/tomato/yolov4-tiny-custom-tomato_best.weights")
-# 獲取 YOLO 未連接的輸出圖層
-# layer = net.getUnconnectedOutLayersNames()
-### ###
-
 def intel():
     global refresh,STOP,profile,align_to,align
     profile = pipeline.start(config)
@@ -297,3 +265,36 @@ def intel_end():
     STOP = True
     RW.f_close()
     cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    ### 設定變數
+    refresh=True
+    H = 480
+    W = 640
+    C44=np.array([[16.6620633415338,0.298376613722848,-0.531117011262040,21.3476678413991],
+                [-0.287531697897276,16.7053096948173,-0.419938931526437,-82.4080705303489],
+                [0.0915137374049609,-0.0995437023903428,1.00445065391047,-299.671628036081],
+                [0,0,0,1]])
+    STOP = False
+    ### ###
+
+    ### intel 前處理(相關設定)
+    pipeline = rs.pipeline()
+    config = rs.config()
+    config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+    config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+    profile = ''
+    align_to = ''
+    align = ''
+
+    ### ###
+
+    ### yolo 導入 前處理
+    LABELS = open("C:/Users/Nuvo-7006DE-PoE/Desktop/tomato/tomato.names").read().strip().split("\n")
+    np.random.seed(666)
+    COLORS = np.random.randint(0, 255, size=(len(LABELS), 3), dtype="uint8")
+    # 導入 YOLO 配置和權重文件并加載網路：
+    # net = cv2.dnn_DetectionModel("C:/Users/Nuvo-7006DE-PoE/Desktop/tomato/yolov4-tiny-custom-tomato.cfg", "C:/Users/Nuvo-7006DE-PoE/Desktop/tomato/yolov4-tiny-custom-tomato_best.weights")
+    # 獲取 YOLO 未連接的輸出圖層
+    # layer = net.getUnconnectedOutLayersNames()
+    ### ###

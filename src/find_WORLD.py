@@ -146,15 +146,14 @@ def find_WORLD_eyetohand(w, h, Chessboard, Chessboard_depth):
         
         return W
 
-if '__name__' == '__main__':
+if __name__ == '__main__':
     find_WORLD_eyetohand(4, 7, 'A1.bmp', 'D1.txt')
     
-# w = find_WORLD(6, 11, 'A1.bmp', 'D1.txt')
-# print(w)
+    # w = find_WORLD(6, 11, 'A1.bmp', 'D1.txt')
+    # print(w)
 
-# for i in range(0, 66, 5):
-    
-#     print(i)
+    # for i in range(0, 66, 5):
+    #     print(i)
 
 
 
