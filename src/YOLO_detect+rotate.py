@@ -10,22 +10,17 @@ if os.path.exists(venv_site_packages):
 import urx
 from urx.urrobot import RobotException
 import socket
-from math import *
-import os
 import cv2
-from function_arm import rv2rpy, arm_movej
-import numpy as np
-from find_WORLD import find_WORLD_eyetohand
-import os
-import cv2
-import csv
 import time
+import numpy as np
+from function_arm import rv2rpy, arm_movej
+from find_WORLD import find_WORLD_eyetohand
 from algorithm.ant import create_distance_matrix, ant_colony_optimization
 from orchid_pose_d435 import orchid_pose_seg_area_leafs_number_predict_d435_new
 import pyrealsense2 as rs
 
 
-# NOTE: q/Q:開始, x:拍照, X:紀錄當前座標, p:yolo_predict
+# NOTE: q/Q:開始, x:拍照, X:紀錄當前座標, p: use yolo to predict and move to the target
 
 #-16.6151988924574	-1.35365000913771	0.581205593619286	-41.9357365124314
 #-1.40063398542737	16.5840344888449	-0.360032069471067	-623.014017362210
@@ -36,12 +31,18 @@ C44_eyetohand4 = np.array([[-16.6358891363565,-1.25258697737028,0.55632225064077
                 [-0.180824295282988,0.109614597224694,-1.05654307600949,1181.95724761074],
                 [0, 0, 0, 1]]) # D435i 轉移矩陣 eye to hand
 
-POSE_MODEL = "models/best_all_0_degree_small.v2i.v11l_pose.pt"
-SEG_MODEL = "models/best_Yat-sen_University_orchid-idea.v7i.v11s_seg.pt"
-  
+MODEL = {
+    "POSE": "models/best_all_0_degree_small.v2i.v11l_pose.pt",
+    "SEG": "models/best_Yat-sen_University_orchid-idea.v7i.v11s_seg.pt"
+}
+UR5 = {
+    "IP": "192.168.1.101",
+    "PORT": 30001
+}
+
 def OPEN():
     s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    s.connect(("192.168.1.101",30001))
+    s.connect((UR5["IP"],UR5["PORT"]))
     
     f = open(r'src/open.txt')
     text = []
@@ -62,7 +63,7 @@ def OPEN():
     
 def CLOSE(width):
     s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    s.connect(("192.168.1.101", 30001))
+    s.connect((UR5["IP"],UR5["PORT"]))
     
     f = open(r'src/close.txt')
     text = []
@@ -92,7 +93,7 @@ def CLOSE(width):
 C=10/1000
 acc = 0.1
 vel = 0.3
-rob = urx.Robot("192.168.1.101")
+rob = urx.Robot(UR5["IP"])
 
 rob.set_tcp((0, 0, 0.1, 0, 0, 0))
 
@@ -320,7 +321,7 @@ try:
                 print("read pose")
                                                     
             if key & 0xFF == ord('p'):                
-                ALL_results_rows, img, csv_data, img_name, predict_time, angle_time, seg_time = orchid_pose_seg_area_leafs_number_predict_d435_new(color_image, depth_image, POSE_MODEL, SEG_MODEL, 
+                ALL_results_rows, img, csv_data, img_name, predict_time, angle_time, seg_time = orchid_pose_seg_area_leafs_number_predict_d435_new(color_image, depth_image, MODEL["POSE"], MODEL["SEG"], 
                                                                                                                                                predict_pose_number)
                 
                 if ALL_results_rows is None or len(ALL_results_rows) == 0:
