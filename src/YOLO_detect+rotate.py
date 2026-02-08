@@ -2,7 +2,6 @@ import sys
 import os
 
 # Ensure we use the virtual environment's site-packages first
-# This is necessary because the user environment has conflicting packages in ~/.local
 venv_site_packages = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.venv', 'lib', 'python3.10', 'site-packages')
 if os.path.exists(venv_site_packages):
     sys.path.insert(0, venv_site_packages)
@@ -12,13 +11,12 @@ from urx.urrobot import RobotException
 import socket
 import cv2
 import time
+from math import *
 import numpy as np
+import pyrealsense2 as rs
 from function_arm import rv2rpy, arm_movej
-from find_WORLD import find_WORLD_eyetohand
 from algorithm.ant import create_distance_matrix, ant_colony_optimization
 from orchid_pose_d435 import orchid_pose_seg_area_leafs_number_predict_d435_new
-import pyrealsense2 as rs
-
 
 # NOTE: q/Q:開始, x:拍照, X:紀錄當前座標, p: use yolo to predict and move to the target
 
@@ -26,10 +24,10 @@ import pyrealsense2 as rs
 #-1.40063398542737	16.5840344888449	-0.360032069471067	-623.014017362210
 #-0.294201422424942	0.0206102811194019	-1.04738461699090	1179.61724461631
 
-C44_eyetohand4 = np.array([[-16.6358891363565,-1.25258697737028,0.556322250640770,-47.8888839900582],
-                [-1.13868096832108,16.6410828171158,-0.363319442237862,-629.383608102392],
-                [-0.180824295282988,0.109614597224694,-1.05654307600949,1181.95724761074],
-                [0, 0, 0, 1]]) # D435i 轉移矩陣 eye to hand
+C44_eyetohand4 = np.array([[-6.30842589e-07,  6.11072692e-08, -6.90856672e-05, -1.06794210e+02],
+                            [ 2.97032996e-06,  1.12525001e-07,  1.18046337e-04, -2.94974979e+02],
+                            [ 2.76420612e-06,  1.71288098e-07,  1.25929049e-04,  5.04399064e+02],
+                            [0, 0, 0, 1]]) # D435i 轉移矩陣 eye to hand
 
 MODEL = {
     "POSE": "models/best_all_0_degree_small.v2i.v11l_pose.pt",
@@ -177,17 +175,17 @@ try:
             dc_images = np.hstack((color_image, colorized_depth))
             cv2.imshow('image and depth', dc_images)         
 
-            if key & 0xFF == ord('J'):#按鍵J
+            if key & 0xFF == ord('J') or key & 0xFF == ord('j'):#按鍵J
                 C=10/1000
                 print(10)    
-            if key & 0xFF == ord('K'):#按鍵K
+            if key & 0xFF == ord('K') or key & 0xFF == ord('k'):#按鍵K
                 C=1/1000
                 print(1)
-            if key & 0xFF == ord('L'):#按鍵L
+            if key & 0xFF == ord('L') or key & 0xFF == ord('l'):#按鍵L
                 C=0.1/1000
                 print(0.1)
                        
-            if key & 0xFF == ord('x'): # 純拍照
+            if key & 0xFF == ord('x') or key & 0xFF == ord('X'): # 純拍照
                 
                 posel = rob.getl()
                 
@@ -212,11 +210,10 @@ try:
                 dc_images = np.hstack((color_image, colorized_depth))
                 cv2.imshow('AD', dc_images)
                 
-            if key & 0xFF == ord('X'): # 純存基座座標
+            # if key & 0xFF == ord('X') or key & 0xFF == ord('x'): # 純存基座座標
                 
                 posel = rob.getl()
-                print(temp)
-                # temp+=1
+                # print(temp)
                 s.write('%f ' %posel[0])
                 s.write('%f ' %posel[1])
                 s.write('%f ' %posel[2])
@@ -242,10 +239,6 @@ try:
                 print(f"RX: {posel[3]:.3f} rad, {dl3:.3f}°")
                 print(f"RY: {posel[4]:.3f} rad, {dl4:.3f}°")
                 print(f"RZ: {posel[5]:.3f} rad, {dl5:.3f}°")
-                               
-            if key & 0xFF == ord('f'): 
-                find_WORLD_eyetohand(4, 7, 'data/' + DIR_NAME  + '/A/A' + str(temp-1) + '.png', 
-                                     'data/' + DIR_NAME  + '/D/D' + str(temp-1) + '.txt')
             
             if key & 0xFF == ord('8'): #向上
                 pose[2]=pose[2]+C
@@ -356,15 +349,6 @@ try:
                         B_temp = C44_eyetohand4.dot(XYZ_temp)
                         B_temp = B_temp/1000
                         
-                        # cv2.imwrite(img_name, img)
-                        # print("save done") 
-                        # print(f"CSV file 'keypoints_data_{str(predict_pose_number)}.csv' has been saved.")
-                        
-                        # time.sleep(5)
-                        # print('wait')                
-            
-                        # print(B_temp)
-                        
                         if i > 0:
                             prev_loc = best_route[i-1]
                             cv2.line(img, tuple(prev_loc[1]), tuple(loc[1]), (255, 0, 255), 2)
@@ -386,19 +370,17 @@ try:
                             # time.sleep(5)
                             posel_R = rob.getl()
                             rob.movel((B_temp[0], B_temp[1], 0.375, posel_R[3], posel_R[4], posel_R[5]), 1, 0.1) # 插下去
-                            # posel = rob.getl()
-                            # print(posel)
                             
                             if loc[4] < 0:   
                                 print(f'夾爪逆時針轉{abs(loc[4])}度') # 夾爪要轉動植株的角度
                                 posej = rob.getj()
                                 posej[5] = posej[5] - radians(abs(loc[4]))
                                 rob.movej((posej[0],
-                                                  posej[1],
-                                                  posej[2],
-                                                  posej[3],
-                                                  posej[4],
-                                                  posej[5]),acc,vel)  #校正角度
+                                            posej[1],
+                                            posej[2],
+                                            posej[3],
+                                            posej[4],
+                                            posej[5]),acc,vel)  #校正角度
                                 # time.sleep(5)
                                 posel_R2 = rob.getl()
                                 rob.movel((B_temp[0], B_temp[1], 0.484763, posel_R2[3], posel_R2[4], posel_R2[5]), 1, 0.1) # 拔出來
@@ -409,11 +391,11 @@ try:
                                 posej = rob.getj()
                                 posej[5] = posej[5] + radians(abs(loc[4]))
                                 rob.movej((posej[0],
-                                                  posej[1],
-                                                  posej[2],
-                                                  posej[3],
-                                                  posej[4],
-                                                  posej[5]),acc,vel)  #校正角度
+                                            posej[1],
+                                            posej[2],
+                                            posej[3],
+                                            posej[4],
+                                            posej[5]),acc,vel)  #校正角度
                                 # time.sleep(5)
                                 posel_R2 = rob.getl()
                                 rob.movel((B_temp[0], B_temp[1], 0.484763, posel_R2[3], posel_R2[4], posel_R2[5]), 1, 0.1)
@@ -426,11 +408,11 @@ try:
                             posej = rob.getj()
                             posej[5] = posej[5] - radians(abs(loc[3][0]+90))
                             rob.movej((posej[0],
-                                              posej[1],
-                                              posej[2],
-                                              posej[3],
-                                              posej[4],
-                                              posej[5]),acc,vel)  #校正角度
+                                        posej[1],
+                                        posej[2],
+                                        posej[3],
+                                        posej[4],
+                                        posej[5]),acc,vel)  #校正角度
                             # time.sleep(5)
                             posel_R = rob.getl()
                             rob.movel((B_temp[0], B_temp[1], 0.375, posel_R[3], posel_R[4], posel_R[5]), 1, 0.1)

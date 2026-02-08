@@ -3,6 +3,11 @@ import time
 import urx
 from math import *
 
+rob = urx.Robot("192.168.1.101")
+rob.set_tcp((0, 0, 0.1, 0, 0, 0))
+rob.set_payload(2, (0, 0, 0.1))
+time.sleep(0.2)
+
 def arm(X,Y,Z,kind,pose0,acc,vel):
     global rob
     # print("X:",X)
@@ -151,12 +156,3 @@ def restart():
     rob.set_payload(2, (0, 0, 0.1))
     time.sleep(0.2)
 
-if __name__ == "__main__":
-    rob = urx.Robot("192.168.1.101")
-    rob.set_tcp((0, 0, 0.1, 0, 0, 0))
-    rob.set_payload(2, (0, 0, 0.1))
-    time.sleep(0.2)
-
-    #class arm():
-    #    def __init__(self,ROB)
-                
