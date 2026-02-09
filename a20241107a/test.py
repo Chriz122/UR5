@@ -1,3 +1,14 @@
+# Fix mpl_toolkits version conflict - MUST be at very start before any imports
+import sys
+
+# Remove system dist-packages from path to avoid mpl_toolkits version mismatch
+sys.path = [p for p in sys.path if '/usr/lib/python3/dist-packages' not in p]
+
+# Also remove any cached mpl_toolkits modules that were loaded by matplotlib
+for mod in list(sys.modules.keys()):
+    if 'mpl_toolkits' in mod:
+        del sys.modules[mod]
+
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D

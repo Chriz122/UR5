@@ -1,6 +1,14 @@
+# Fix mpl_toolkits version conflict - MUST be at very start before any imports
+import sys
+sys.path = [p for p in sys.path if '/usr/lib/python3/dist-packages' not in p]
+for mod in list(sys.modules.keys()):
+    if 'mpl_toolkits' in mod:
+        del sys.modules[mod]
+
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D  # Register 3D projection
 from scipy.interpolate import griddata
 from plotCalbPoint3d_noText import plotCalbPoint3d_noText
 
@@ -13,58 +21,36 @@ cam_location = np.ones((NUM * point_num, 9))
 a = np.zeros((132, 3))
 XYZ_ = XYZ.copy()
 
-# Load pose data (9 images x 9 columns)
+# Load pose data - use the INTERPOLATED pose.txt (132 points)
+# NOT the raw 9-row file at 20260208_162701/pose.txt
 try:
-    pose_data = np.loadtxt('a20241107a/20260208_162701/pose.txt')
+    pose_data = np.loadtxt('a20241107a/pose.txt')
     print(f"Loaded pose.txt with shape: {pose_data.shape}", flush=True)
 except Exception as e:
     raise ValueError(f"Could not load pose.txt: {e}")
 
-# Apply pose data to cam_location
-# Iterate over the processed images (n=1 to NUM)
-# list_vals = [5, 6, 7, 8, 9] (indices for pose_data should be 4, 5, 6, 7, 8 if 0-indexed)
-# User loop range(1, 5) covers n=1, 2, 3, 4 (4 items). But NUM=5.
-# Let's fix loop to range(1, NUM + 1)
+# Validate we have 132 points
+if pose_data.shape[0] != point_num:
+    raise ValueError(f"Expected {point_num} points in pose.txt, got {pose_data.shape[0]}")
+
+# pose.txt format (9 columns):
+# Col 0-2: X, Y, Z position in meters
+# Col 3-5: Euler angles in degrees (NOT used for calibration, keep as-is)
+# Col 6-8: Rotation vector in radians (rx, ry, rz)
+
+# For calibration, we need world coordinates (cam_location) for each chessboard point
+# Since we have the same 132-point grid for all images A5-A9, we tile the pose data
+
 for n in range(1, NUM + 1):
-    # Map n (1..5) to pose index. 
-    # list_vals[n-1] gives the image number (e.g., 5).
-    # Assuming pose.txt rows correspond to A1...A9.
-    # So for A5, we need row index 4.
-    img_idx = list_vals[n-1]
-    pose_row_idx = img_idx - 1 
+    start_idx = (n-1) * point_num
+    end_idx = n * point_num
     
-    if pose_row_idx >= pose_data.shape[0]:
-         raise ValueError(f"Pose index {pose_row_idx} out of bounds for pose data with shape {pose_data.shape}")
-
-    # Broadcast single row (9,) to (132, 9)
-    # cam_location is (NUM*point_num, 9)
-    # Target slice is (132, 9)
-    pose_row = pose_data[pose_row_idx, :] # Shape (9,)
+    # Copy pose data to this image's slice
+    cam_location[start_idx:end_idx, :] = pose_data.copy()
     
-    # Assign broadcasted value
-    cam_location[(n-1)*point_num : n*point_num, :] = pose_row * 1000 # Convert to mm if needed
-
-    # The user's original code had:
-    # cam_location[(n-1)*point_num+1:n*point_num,3] = cam_location[(n-1)*point_num+1:n*point_num,3]+50*(n-1)
-    # This modifies the 4th column (index 3). 
-    # Do we still need this? 
-    # The user replaced the generation logic with loading from file.
-    # If the file contains the *actual* robot pose, we probably shouldn't modify it artificially.
-    # However, the user's code DID include that line after loading.
-    # It looks like an offset for Z? 
-    # "cam_location... = ... + 50*(n-1)"
-    # If they want to keep it, I will leave it, but corrected for 0-based indexing.
-    # cam_location is (NUM*point_num, 9). 3rd index is 4th col.
-    # cam_location[(n-1)*point_num : n*point_num, 3] += 50 * (n-1) 
-    pass # I will comment it out or assume pose.txt is ground truth. 
-    # Actually, the user's snippet logic:
-    # cam_location[..., 1:9] = ...
-    # cam_location[..., 3] = ... + 50*(n-1)
-    # This implies they wanted columns 1-8 from file, and col 0 as 1s?
-    # But pose.txt has 9 columns.
-    
-    # Let's trust pose.txt fully for now and overwrite everything.
-    # If the offset is needed, the user can re-add it, but mixing data sources is risky.
+    # Convert ONLY position (cols 0-2) to mm, leave angles unchanged
+    cam_location[start_idx:end_idx, 0:3] *= 1000  # X, Y, Z: meters -> mm
+    # Columns 3-8 are angles, do NOT multiply by 1000!
 
 
 # 繪圖

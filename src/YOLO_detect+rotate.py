@@ -24,11 +24,16 @@ from orchid_pose_d435 import orchid_pose_seg_area_leafs_number_predict_d435_new
 #-1.40063398542737	16.5840344888449	-0.360032069471067	-623.014017362210
 #-0.294201422424942	0.0206102811194019	-1.04738461699090	1179.61724461631
 
-C44_eyetohand4 = np.array([[-6.30842589e-07,  6.11072692e-08, -6.90856672e-05, -1.06794210e+02],
-                            [ 2.97032996e-06,  1.12525001e-07,  1.18046337e-04, -2.94974979e+02],
-                            [ 2.76420612e-06,  1.71288098e-07,  1.25929049e-04,  5.04399064e+02],
+C44_eyetohand4 = np.array([[-9.11883399e-01, -1.45585464e+01,  3.88683390e-01,  3.47766722e+02],
+                            [ 8.08838811e-01,  1.87856442e+01, -4.89463200e-01, -6.01519485e+02],
+                            [-9.35829609e-03, -2.54532451e-01,  6.57932997e-03,  2.14397570e+02],   
                             [0, 0, 0, 1]]) # D435i 轉移矩陣 eye to hand
-
+OFFSET = {
+    "x":-0.02,
+    "y":0.119,
+    "z":0.0,
+    "angle":-35
+}
 MODEL = {
     "POSE": "models/best_all_0_degree_small.v2i.v11l_pose.pt",
     "SEG": "models/best_Yat-sen_University_orchid-idea.v7i.v11s_seg.pt"
@@ -311,7 +316,7 @@ try:
                 print(pose[0],pose[1],pose[2])
                 print("read pose")
                                                     
-            if key & 0xFF == ord('p'):                
+            if key & 0xFF == ord('p'):  # 檢測蘭花旋轉角度              
                 ALL_results_rows, img, csv_data, img_name, predict_time, angle_time, seg_time = orchid_pose_seg_area_leafs_number_predict_d435_new(color_image, depth_image, MODEL["POSE"], MODEL["SEG"], 
                                                                                                                                                predict_pose_number)
                 
@@ -353,23 +358,23 @@ try:
                             prev_loc = best_route[i-1]
                             cv2.line(img, tuple(prev_loc[1]), tuple(loc[1]), (255, 0, 255), 2)
                         
-                        rob.movel((B_temp[0], B_temp[1], 0.484763, 0, 3.1271, 0), 1, 0.1) # 移動到蘭花中心
+                        rob.movel((B_temp[0]-0.01, B_temp[1]+0.12, 0.484763, 0, 3.1271, 0), 1, 0.1) # 移動到蘭花中心
                     
-                        if loc[3][0]+90 < 0:
+                        if loc[3][0]+90+OFFSET["angle"] < 0:
                             # 夾爪順時針轉
                             CLOSE((loc[3][2]+12)/1000)
-                            print(f'夾爪順時針轉{abs(loc[3][0]+90)}度') # 夾爪要對齊植株介質的角度
+                            print(f'夾爪順時針轉{abs(loc[3][0]+90+OFFSET["angle"])}度') # 夾爪要對齊植株介質的角度
                             posej = rob.getj()
-                            posej[5] = posej[5] + radians(abs(loc[3][0]+90))
+                            posej[5] = posej[5] + radians(abs(loc[3][0]+90+OFFSET["angle"]))
                             rob.movej((posej[0],
-                                              posej[1],
-                                              posej[2],
-                                              posej[3],
-                                              posej[4],
-                                              posej[5]),acc,vel)  #校正角度
+                                        posej[1],
+                                        posej[2],
+                                        posej[3],
+                                        posej[4],
+                                        posej[5]),acc,vel)  #校正角度
                             # time.sleep(5)
                             posel_R = rob.getl()
-                            rob.movel((B_temp[0], B_temp[1], 0.375, posel_R[3], posel_R[4], posel_R[5]), 1, 0.1) # 插下去
+                            rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.29, posel_R[3], posel_R[4], posel_R[5]), 1, 0.1) # 插下去
                             
                             if loc[4] < 0:   
                                 print(f'夾爪逆時針轉{abs(loc[4])}度') # 夾爪要轉動植株的角度
@@ -383,7 +388,7 @@ try:
                                             posej[5]),acc,vel)  #校正角度
                                 # time.sleep(5)
                                 posel_R2 = rob.getl()
-                                rob.movel((B_temp[0], B_temp[1], 0.484763, posel_R2[3], posel_R2[4], posel_R2[5]), 1, 0.1) # 拔出來
+                                rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, posel_R2[3], posel_R2[4], posel_R2[5]), 1, 0.1) # 拔出來
                                 rob.movel((B_temp[0], B_temp[1], 0.484763, 0, 3.1271, 0), 1, 0.1) # 歸位
                                 
                             else:
@@ -398,15 +403,15 @@ try:
                                             posej[5]),acc,vel)  #校正角度
                                 # time.sleep(5)
                                 posel_R2 = rob.getl()
-                                rob.movel((B_temp[0], B_temp[1], 0.484763, posel_R2[3], posel_R2[4], posel_R2[5]), 1, 0.1)
+                                rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, posel_R2[3], posel_R2[4], posel_R2[5]), 1, 0.1)
                                 rob.movel((B_temp[0], B_temp[1], 0.484763, 0, 3.1271, 0), 1, 0.1)
                             
-                        elif loc[3][0]+90 > 0:
+                        elif loc[3][0]+90+OFFSET["angle"] > 0:
                             # 夾爪逆時針轉
                             CLOSE((loc[3][2]+12)/1000)
-                            print(f'夾爪逆時針轉{abs(loc[3][0]+90)}度') # 夾爪要對齊植株介質的角度
+                            print(f'夾爪逆時針轉{abs(loc[3][0]+90+OFFSET["angle"])}度') # 夾爪要對齊植株介質的角度
                             posej = rob.getj()
-                            posej[5] = posej[5] - radians(abs(loc[3][0]+90))
+                            posej[5] = posej[5] - radians(abs(loc[3][0]+90+OFFSET["angle"]))
                             rob.movej((posej[0],
                                         posej[1],
                                         posej[2],
@@ -415,22 +420,22 @@ try:
                                         posej[5]),acc,vel)  #校正角度
                             # time.sleep(5)
                             posel_R = rob.getl()
-                            rob.movel((B_temp[0], B_temp[1], 0.375, posel_R[3], posel_R[4], posel_R[5]), 1, 0.1)
+                            rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.29, posel_R[3], posel_R[4], posel_R[5]), 1, 0.1)
                             
                             if loc[4] < 0:   
-                                print(f'夾爪逆時針轉{abs(loc[4])}度') # 夾爪要轉動植株的角度
+                                print(f'夾爪逆時針轉{abs(loc[4])}度') # 夾爪要轉動植株的角度    
                                 posej = rob.getj()
                                 posej[5] = posej[5] - radians(abs(loc[4]))
                                 rob.movej((posej[0],
-                                                  posej[1],
-                                                  posej[2],
-                                                  posej[3],
-                                                  posej[4],
-                                                  posej[5]),acc,vel)  #校正角度
+                                            posej[1],
+                                            posej[2],
+                                            posej[3],
+                                            posej[4],
+                                            posej[5]),acc,vel)  #校正角度
                                 # time.sleep(5)
                                 posel_R2 = rob.getl()
-                                rob.movel((B_temp[0], B_temp[1], 0.484763, posel_R2[3], posel_R2[4], posel_R2[5]), 1, 0.1)
-                                rob.movel((B_temp[0], B_temp[1], 0.484763, 0, 3.1271, 0), 1, 0.1)
+                                rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, posel_R2[3], posel_R2[4], posel_R2[5]), 1, 0.1)
+                                rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, 0, 3.1271, 0), 1, 0.1)
                                 
                             else:
                                 print(f'夾爪順時針轉{abs(loc[4])}度') # 夾爪要轉動植株的角度   
@@ -444,8 +449,8 @@ try:
                                                   posej[5]),acc,vel)  #校正角度
                                 # time.sleep(5)
                                 posel_R2 = rob.getl()
-                                rob.movel((B_temp[0], B_temp[1], 0.484763, posel_R2[3], posel_R2[4], posel_R2[5]), 1, 0.1)
-                                rob.movel((B_temp[0], B_temp[1], 0.484763, 0, 3.1271, 0), 1, 0.1)
+                                rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, posel_R2[3], posel_R2[4], posel_R2[5]), 1, 0.1)
+                                rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, 0, 3.1271, 0), 1, 0.1)
                     
                     arm_movej((radians(-90.07),
                                 radians(-70.8),
