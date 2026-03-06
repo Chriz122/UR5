@@ -1196,5 +1196,161 @@ def orchid_pose_seg_area_leafs_number_predict_d435_new(img, depth_frame, pose_mo
         exetime2 = end_time_2 - start_time_2 # 辨識時間
         
         return ALL_results_rows, img_copy, csv_data, img_name, exetime, exetime2, exetime3
+
+
+def orchid_pose_sick_predict_d435(img, depth_frame, pose_model_name, seg_model_name, predict_pose_number):
+    """
+    專用於 POSE2 (sick_keypoint) 模型的預測函式。
+    此模型有 3 個關鍵點: kpt0=up(夾取點上), kpt1=center(植株中心), kpt2=down(夾取點下)
+    
+    回傳格式與 orchid_pose_seg_area_leafs_number_predict_d435_new 相同:
+    results_rows = [id, [center_x, center_y], [leafs_area, leafs_number], [grip_angle, [grip_centroid_x, grip_centroid_y], grip_distance]]
+    """
+    
+    # skeleton: up-center, down-center
+    skeleton = [[1, 2], [3, 2]]
+
+    pose_palette = np.array([[255, 128, 0], [255, 153, 51], [255, 178, 102], [230, 230, 0], [255, 153, 255],
+                             [153, 204, 255], [255, 102, 255], [255, 51, 255], [102, 178, 255], [51, 153, 255],
+                             [255, 153, 153], [255, 102, 102], [255, 51, 51], [153, 255, 153], [102, 255, 102],
+                             [51, 255, 51], [0, 255, 0], [0, 0, 255], [255, 0, 0], [255, 255, 255]], dtype=np.uint8)
+
+    kpt_color = pose_palette[[10, 0, 9]]  # 3 個關鍵點的顏色
+
+    limb_color = pose_palette[[9, 7]]  # 2 條骨架線的顏色
+
+    ALL_results_rows = []
+    
+    #---------------------------------------------------------------  
+    
+    model = YOLO(pose_model_name, task='pose')
+    img_name = "predict-pose-sick-" + str(predict_pose_number) + ".jpg"
+    
+    start_time = time.time()
         
+    results = model.track(source=img, verbose=False, device=0, conf=0.25, iou=0.45, 
+                          save=False, tracker="bytetrack.yaml", persist=True)[0]
+    
+    end_time = time.time()
+    exetime = end_time - start_time  # 辨識時間
+    
+    img_copy = img.copy()
+    
+    #--------------------------------------------------------------- 
+    
+    #================================================================================   
+    
+    start_time_3 = time.time()
+    
+    img_seg, img_seg_name, results_row_leafs_seg = orchid_seg_leafs_number_predict_block2(img, seg_model_name, predict_pose_number)
+
+    end_time_3 = time.time()
+    exetime3 = end_time_3 - start_time_3  # 分割時間
+    
+    img_seg_copy = img_seg.copy()
+    
+    #================================================================================
+    
+    if results.boxes.data.tolist() is None or results.boxes.id is None:
+        return None, img, None, img_name, exetime, 0, exetime3
+    
+    else:
+        names = results.names
+        boxes = results.boxes.data.tolist()
+        ids = np.array(results.boxes.id.cpu(), dtype="int")
+    
+        # keypoints.data.shape -> n, 3, 3  (3 keypoints, each with x, y, conf)
+        keypoints = results.keypoints.cpu().numpy()
+        # Prepare CSV data
+        csv_data = [["id", "(up_x, up_y)", "(center_x, center_y)", "(down_x, down_y)", "Leafs-Number", "Leafs-Area", "Grip-Angle", "Label"]]
         
+        start_time_2 = time.time()
+        
+        for obj, keypoint, id in zip(boxes, keypoints.data, ids):
+            left, top, right, bottom = int(obj[0]), int(obj[1]), int(obj[2]), int(obj[3])
+            confidence = obj[4]
+            label = int(obj[5])
+            color = random_color(label)
+            centerx = int((left + right) / 2)
+            centery = int((top + bottom) / 2)
+            
+            row = [id]
+            nrow = [id]  # nrow[0]=id, nrow[1]=up, nrow[2]=center, nrow[3]=down
+            results_rows = [id]
+            
+            for i, (x, y, conf) in enumerate(keypoint):
+                color_k = [int(c) for c in kpt_color[i]]
+                row.append(f"({int(x)}, {int(y)})")
+                nrow.append([int(x), int(y)])
+                cv2.circle(img_copy, (int(x), int(y)), 5, color_k, -1, lineType=cv2.LINE_AA)
+            
+            # nrow[1] = up, nrow[2] = center, nrow[3] = down
+            # 使用 center (kpt1) 作為定位點
+            results_rows.append([nrow[2][0], nrow[2][1]])  # results_rows[1] = center point
+            
+            # 計算葉片資訊 (使用 up 和 down 作為範圍參考)
+            needed_leafs = check_point_to_points(
+                [nrow[2][0], nrow[2][1]], results_row_leafs_seg,
+                [nrow[1][0], nrow[1][1]], [nrow[3][0], nrow[3][1]]
+            )
+            results_rows.append(needed_leafs)  # results_rows[2] = leafs info
+            row.append(needed_leafs[1])
+            row.append(needed_leafs[0])
+            
+            # 使用 up(nrow[1]) 和 down(nrow[3]) 計算夾取角度和距離
+            up_x, up_y = nrow[1][0], nrow[1][1]
+            down_x, down_y = nrow[3][0], nrow[3][1]
+            
+            grip_angle = int(calculate_angle_soil(left, top, right, bottom, up_x, up_y, down_x, down_y))
+            
+            grip_centroid_x = int((up_x + down_x) / 2)
+            grip_centroid_y = int((up_y + down_y) / 2)
+            grip_distance = math.sqrt(
+                ((up_x - down_x) ** 2) +
+                ((up_y - down_y) ** 2) +
+                ((float(depth_frame[up_y][up_x]) - float(depth_frame[down_y][down_x])) ** 2)
+            )
+            
+            row.append(grip_angle)
+            row.append(names[label])
+            
+            # results_rows[3] = [angle, [centroid_x, centroid_y], distance]
+            results_rows.append([grip_angle, [grip_centroid_x, grip_centroid_y], grip_distance])
+            
+            ALL_results_rows.append(results_rows)
+            
+            # 繪製骨架線和標記
+            x_up, y_up = nrow[1]
+            x_center, y_center = nrow[2]
+            x_down, y_down = nrow[3]
+            
+            # 繪製 up-down 連線
+            cv2.line(img_copy, (x_up, y_up), (x_down, y_down), (255, 0, 0), 2)
+            
+            # 繪製角度文字
+            cv2.putText(img_copy, f'{names[label]} {int(grip_angle)} deg', 
+                        (centerx + 10, centery - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+            
+            csv_data.append(row)
+            
+            for i, sk in enumerate(skeleton):
+                pos1 = (int(keypoint[(sk[0] - 1), 0]), int(keypoint[(sk[0] - 1), 1]))
+                pos2 = (int(keypoint[(sk[1] - 1), 0]), int(keypoint[(sk[1] - 1), 1]))
+                
+                conf1 = keypoint[(sk[0] - 1), 2]
+                conf2 = keypoint[(sk[1] - 1), 2]
+                if conf1 < 0.5 or conf2 < 0.5:
+                    continue
+                if pos1[0] == 0 or pos1[1] == 0 or pos2[0] == 0 or pos2[1] == 0:
+                    continue
+                
+                cv2.line(img_copy, pos1, pos2, [int(c) for c in limb_color[i]], thickness=2, lineType=cv2.LINE_AA)
+            
+            # 標記 id
+            caption = f"{id}"
+            w, h = cv2.getTextSize(caption, 0, 1, 2)[0]
+        
+        end_time_2 = time.time()
+        exetime2 = end_time_2 - start_time_2  # 角度計算時間
+        
+        return ALL_results_rows, img_copy, csv_data, img_name, exetime, exetime2, exetime3

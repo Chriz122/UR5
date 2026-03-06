@@ -14,32 +14,33 @@ import time
 from math import *
 import numpy as np
 import pyrealsense2 as rs
-from function_arm import rv2rpy, arm_movej
+from function_arm import rv2rpy
 from algorithm.ant import create_distance_matrix, ant_colony_optimization
-from orchid_pose_d435 import orchid_pose_seg_area_leafs_number_predict_d435_new
+from orchid_pose_d435 import orchid_pose_seg_area_leafs_number_predict_d435_new, orchid_pose_sick_predict_d435
 
 # NOTE: q/Q:開始, x:拍照, X:紀錄當前座標, p: use yolo to predict and move to the target
 
-#-16.6151988924574	-1.35365000913771	0.581205593619286	-41.9357365124314
-#-1.40063398542737	16.5840344888449	-0.360032069471067	-623.014017362210
-#-0.294201422424942	0.0206102811194019	-1.04738461699090	1179.61724461631
+C44_eyetohand4 = np.array([
+    [-1.19851961e+01, -1.19297568e+01,  6.80818913e-01, -1.35345202e+02],
+    [-1.19255480e+01,  1.19844732e+01,  6.47812863e-02, -4.72461476e+02],
+    [ 1.41113627e-01, -2.96775542e-01,  3.21331049e-03,  2.22384683e+02],
+    [+0.00000000e+00, +0.00000000e+00, +0.00000000e+00, +1.00000000e+00],
+]) # D435i 轉移矩陣 eye to hand
 
-C44_eyetohand4 = np.array([[-9.11883399e-01, -1.45585464e+01,  3.88683390e-01,  3.47766722e+02],
-                            [ 8.08838811e-01,  1.87856442e+01, -4.89463200e-01, -6.01519485e+02],
-                            [-9.35829609e-03, -2.54532451e-01,  6.57932997e-03,  2.14397570e+02],   
-                            [0, 0, 0, 1]]) # D435i 轉移矩陣 eye to hand
 OFFSET = {
-    "x":-0.02,
-    "y":0.119,
-    "z":0.0,
-    "angle":-35
+    "x":0.0,
+    "y":0.0,
+    "z":-0.03,
+    "angle":45
 }
+
 MODEL = {
     "POSE": "models/best_all_0_degree_small.v2i.v11l_pose.pt",
-    "SEG": "models/best_Yat-sen_University_orchid-idea.v7i.v11s_seg.pt"
+    "SEG": "models/best_Yat-sen_University_orchid-idea.v7i.v11s_seg.pt",
+    "POSE2": "models/best_sick_keypoint.v23i.yolo-master-pose-s_v0_1_dinov3.onnx"
 }
 UR5 = {
-    "IP": "192.168.1.101",
+    "IP": "192.168.1.101",  
     "PORT": 30001
 }
 
@@ -234,6 +235,7 @@ try:
                 s.write('%f ' %posel[5])
                 
                 s.write('\n')
+                s.flush()  # 立即寫入磁碟，避免程式崩潰時資料遺失
                 
                 dl3 = degrees(posel[3]); dl4 = degrees(posel[4]); dl5 = degrees(posel[5]);
                 
@@ -306,17 +308,17 @@ try:
                 print('LEFT: ', LEFT)
                 
             if (key & 0xFF == ord('q')) or (key & 0xFF == ord('Q')): 
-                arm_movej((radians(-90.07),
-                            radians(-70.8),
-                            radians(-78.95),             # 負的向下
-                            radians(-120.25),
-                            radians(90),
-                            radians(0.39)),acc,vel)  #校正角度
+                rob.movej((radians(-26.15),
+                            radians(-71.91),
+                            radians(-106.04),             # 負的向下
+                            radians(-91.31),
+                            radians(89.45),
+                            radians(63.88)),acc,vel)  #校正角度
                 pose = rob.getl()
                 print(pose[0],pose[1],pose[2])
                 print("read pose")
                                                     
-            if key & 0xFF == ord('p'):  # 檢測蘭花旋轉角度              
+            if key & 0xFF == ord('r'):  # 檢測蘭花旋轉角度              
                 ALL_results_rows, img, csv_data, img_name, predict_time, angle_time, seg_time = orchid_pose_seg_area_leafs_number_predict_d435_new(color_image, depth_image, MODEL["POSE"], MODEL["SEG"], 
                                                                                                                                                predict_pose_number)
                 
@@ -358,7 +360,7 @@ try:
                             prev_loc = best_route[i-1]
                             cv2.line(img, tuple(prev_loc[1]), tuple(loc[1]), (255, 0, 255), 2)
                         
-                        rob.movel((B_temp[0]-0.01, B_temp[1]+0.12, 0.484763, 0, 3.1271, 0), 1, 0.1) # 移動到蘭花中心
+                        rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, 0, 3.1271, 0), 1, 0.1) # 移動到蘭花中心
                     
                         if loc[3][0]+90+OFFSET["angle"] < 0:
                             # 夾爪順時針轉
@@ -374,7 +376,7 @@ try:
                                         posej[5]),acc,vel)  #校正角度
                             # time.sleep(5)
                             posel_R = rob.getl()
-                            rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.29, posel_R[3], posel_R[4], posel_R[5]), 1, 0.1) # 插下去
+                            rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.29+OFFSET["z"], posel_R[3], posel_R[4], posel_R[5]), 1, 0.1) # 插下去
                             
                             if loc[4] < 0:   
                                 print(f'夾爪逆時針轉{abs(loc[4])}度') # 夾爪要轉動植株的角度
@@ -389,7 +391,7 @@ try:
                                 # time.sleep(5)
                                 posel_R2 = rob.getl()
                                 rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, posel_R2[3], posel_R2[4], posel_R2[5]), 1, 0.1) # 拔出來
-                                rob.movel((B_temp[0], B_temp[1], 0.484763, 0, 3.1271, 0), 1, 0.1) # 歸位
+                                rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, 0, 3.1271, 0), 1, 0.1) # 歸位
                                 
                             else:
                                 print(f'夾爪順時針轉{abs(loc[4])}度') # 夾爪要轉動植株的角度
@@ -404,7 +406,7 @@ try:
                                 # time.sleep(5)
                                 posel_R2 = rob.getl()
                                 rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, posel_R2[3], posel_R2[4], posel_R2[5]), 1, 0.1)
-                                rob.movel((B_temp[0], B_temp[1], 0.484763, 0, 3.1271, 0), 1, 0.1)
+                                rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, 0, 3.1271, 0), 1, 0.1)
                             
                         elif loc[3][0]+90+OFFSET["angle"] > 0:
                             # 夾爪逆時針轉
@@ -420,7 +422,7 @@ try:
                                         posej[5]),acc,vel)  #校正角度
                             # time.sleep(5)
                             posel_R = rob.getl()
-                            rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.29, posel_R[3], posel_R[4], posel_R[5]), 1, 0.1)
+                            rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.29+OFFSET["z"], posel_R[3], posel_R[4], posel_R[5]), 1, 0.1)
                             
                             if loc[4] < 0:   
                                 print(f'夾爪逆時針轉{abs(loc[4])}度') # 夾爪要轉動植株的角度    
@@ -452,21 +454,106 @@ try:
                                 rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, posel_R2[3], posel_R2[4], posel_R2[5]), 1, 0.1)
                                 rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, 0, 3.1271, 0), 1, 0.1)
                     
-                    arm_movej((radians(-90.07),
-                                radians(-70.8),
-                                radians(-78.95),             # 負的向下
-                                radians(-120.25),
-                                radians(90),
-                                radians(0.39)),acc,vel)  #校正角度
+                    rob.movej((radians(-26.15),
+                                radians(-71.91),
+                                radians(-106.04),             # 負的向下
+                                radians(-91.31),
+                                radians(89.45),
+                                radians(63.88)),acc,vel)  #校正角度
                     
                     time.sleep(1)
                                   
                     predict_pose_number += 1
 
-            if key == 27: #按下 Esc 關閉視窗
-                cv2.destroyAllWindows()
-                rob.close()
-                sys.exit()
+            if key & 0xFF == ord('p') or key & 0xFF == ord('P'):  # 夾取帶病徵蘭花              
+                ALL_results_rows, img, csv_data, img_name, predict_time, angle_time, seg_time = orchid_pose_sick_predict_d435(color_image, depth_image, MODEL["POSE2"], MODEL["SEG"], 
+                                                                                                                                            predict_pose_number)
+                    
+                if ALL_results_rows is None or len(ALL_results_rows) == 0:
+                    print("No valid pose data detected.")
+                    
+                else:  
+                    csv_data.append([])
+                    csv_data.append(["Predict-time(sec):", predict_time])
+                    csv_data.append(["Angle-time(sec):", angle_time])
+                    csv_data.append(["Segment-time(sec):", seg_time])
+                    # 创建距离矩阵
+                    distance_matrix = create_distance_matrix(ALL_results_rows)
+                    
+                    # 使用蚁群算法规划路线
+                    best_route_indices, best_distance, ant_time = ant_colony_optimization(distance_matrix)
+                    csv_data.append(["Ant Path-execute-time(sec):", ant_time])
+                    
+                    best_route = [ALL_results_rows[i] for i in best_route_indices]
+                    
+                    # 打印总距离
+                    print(f"总距离: {best_distance}")
+                    
+                    # cv2.imshow("windows_name", img)
+                    cv2.imwrite("data/" + DIR_NAME + "/" + img_name, img) # 轉前辨識圖
+                    # 绘制路径
+                    for i in range(len(best_route)):
+                        loc = best_route[i]
+                        # # print(loc)
+                        # XYZ_temp = [loc[2][1][0], loc[2][1][1], depth_image[loc[2][1][1], loc[2][1][0]], 1]
+                        XYZ_temp = [loc[1][0], loc[1][1], depth_image[loc[1][1], loc[1][0]], 1]
+                        XYZ_temp = np.array(XYZ_temp,'float32')
+                        XYZ_temp[0] = XYZ_temp[0] * XYZ_temp[2]/10000
+                        XYZ_temp[1] = XYZ_temp[1] * XYZ_temp[2]/10000
+                        B_temp = C44_eyetohand4.dot(XYZ_temp)
+                        B_temp = B_temp/1000
+                        
+                        if i > 0:
+                            prev_loc = best_route[i-1]
+                            cv2.line(img, tuple(prev_loc[1]), tuple(loc[1]), (255, 0, 255), 2)
+                        
+                        rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, 0, 3.1271, 0), 1, 0.1) # 移動到蘭花中心
+                    
+
+                        # 夾爪順時針轉
+                        CLOSE((loc[3][2]+12)/1000)
+                        print(f'夾爪順時針轉{abs(loc[3][0]+90+OFFSET["angle"])}度') # 夾爪要對齊植株介質的角度
+                        posej = rob.getj()
+                        posej[5] = posej[5] + radians(abs(loc[3][0]+90+OFFSET["angle"]))
+                        rob.movej((posej[0],
+                                    posej[1],
+                                    posej[2],
+                                    posej[3],
+                                    posej[4],
+                                    posej[5]),acc,vel)  #校正角度
+                        # time.sleep(5)
+                        posel_R = rob.getl()
+                        rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.29+OFFSET["z"], posel_R[3], posel_R[4], posel_R[5]), 1, 0.1) # 插下去
+                        
+                        CLOSE(((loc[3][2]+12)/1000)*0.7)
+                        # 將帶病徵蘭花移到收集點
+                        rob.movej((radians(15.17),
+                                    radians(-59.64),
+                                    radians(-124.58),             # 負的向下
+                                    radians(-84.99),
+                                    radians(88.90),
+                                    radians(105.10)),acc,vel)
+                        CLOSE(((loc[3][2]+12)/1000)*0.7)
+
+                        # 開何使蘭花介質鬆脫
+                        for _ in range(2):
+                            CLOSE(((loc[3][2]+12)/1000)*1.5)
+                            CLOSE(((loc[3][2]+12)/1000)*0.7)
+                        CLOSE((loc[3][2]+12)/1000)
+
+                        # 預備姿勢
+                        time.sleep(1)
+                        rob.movej((radians(-26.15),
+                                    radians(-71.91),
+                                    radians(-106.04),             # 負的向下
+                                    radians(-91.31),
+                                    radians(89.45),
+                                    radians(63.88)),acc,vel)  #校正角度
+                    time.sleep(1)         
+                    predict_pose_number += 1    
+
+            if key & 0xFF == 27:  # ESC
                 break
+            
 finally:
     pipeline.stop()
