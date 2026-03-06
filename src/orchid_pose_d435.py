@@ -1327,9 +1327,9 @@ def orchid_pose_sick_predict_d435(img, depth_frame, pose_model_name, seg_model_n
             # 繪製 up-down 連線
             cv2.line(img_copy, (x_up, y_up), (x_down, y_down), (255, 0, 0), 2)
             
-            # 繪製角度文字
-            cv2.putText(img_copy, f'{names[label]} {int(grip_angle)} deg', 
-                        (centerx + 10, centery - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+            # # 繪製角度文字
+            # cv2.putText(img_copy, f'{names[label]} {int(grip_angle)} deg', 
+            #             (centerx + 10, centery - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
             
             csv_data.append(row)
             
@@ -1346,9 +1346,9 @@ def orchid_pose_sick_predict_d435(img, depth_frame, pose_model_name, seg_model_n
                 
                 cv2.line(img_copy, pos1, pos2, [int(c) for c in limb_color[i]], thickness=2, lineType=cv2.LINE_AA)
             
-            # 標記 id
-            caption = f"{id}"
-            w, h = cv2.getTextSize(caption, 0, 1, 2)[0]
+            # # 標記 id
+            # caption = f"{id}"
+            # w, h = cv2.getTextSize(caption, 0, 1, 2)[0]
         
         end_time_2 = time.time()
         exetime2 = end_time_2 - start_time_2  # 角度計算時間

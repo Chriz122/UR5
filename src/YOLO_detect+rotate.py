@@ -30,7 +30,7 @@ C44_eyetohand4 = np.array([
 OFFSET = {
     "x":0.0,
     "y":0.0,
-    "z":-0.03,
+    "z":-0.05,
     "angle":45
 }
 
@@ -362,12 +362,16 @@ try:
                         
                         rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, 0, 3.1271, 0), 1, 0.1) # 移動到蘭花中心
                     
-                        if loc[3][0]+90+OFFSET["angle"] < 0:
+                        # 計算並正規化夾爪對齊角度到 [-180, 180]
+                        grip_align_angle = loc[3][0] + 90 + OFFSET["angle"]
+                        grip_align_angle = ((grip_align_angle + 180) % 360) - 180
+                        
+                        if grip_align_angle < 0:
                             # 夾爪順時針轉
                             CLOSE((loc[3][2]+12)/1000)
-                            print(f'夾爪順時針轉{abs(loc[3][0]+90+OFFSET["angle"])}度') # 夾爪要對齊植株介質的角度
+                            print(f'夾爪順時針轉{abs(grip_align_angle)}度') # 夾爪要對齊植株介質的角度
                             posej = rob.getj()
-                            posej[5] = posej[5] + radians(abs(loc[3][0]+90+OFFSET["angle"]))
+                            posej[5] = posej[5] + radians(abs(grip_align_angle))
                             rob.movej((posej[0],
                                         posej[1],
                                         posej[2],
@@ -408,12 +412,12 @@ try:
                                 rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, posel_R2[3], posel_R2[4], posel_R2[5]), 1, 0.1)
                                 rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, 0, 3.1271, 0), 1, 0.1)
                             
-                        elif loc[3][0]+90+OFFSET["angle"] > 0:
+                        elif grip_align_angle > 0:
                             # 夾爪逆時針轉
                             CLOSE((loc[3][2]+12)/1000)
-                            print(f'夾爪逆時針轉{abs(loc[3][0]+90+OFFSET["angle"])}度') # 夾爪要對齊植株介質的角度
+                            print(f'夾爪逆時針轉{abs(grip_align_angle)}度') # 夾爪要對齊植株介質的角度
                             posej = rob.getj()
-                            posej[5] = posej[5] - radians(abs(loc[3][0]+90+OFFSET["angle"]))
+                            posej[5] = posej[5] - radians(abs(grip_align_angle))
                             rob.movej((posej[0],
                                         posej[1],
                                         posej[2],
@@ -509,30 +513,41 @@ try:
                         
                         rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, 0, 3.1271, 0), 1, 0.1) # 移動到蘭花中心
                     
-
-                        # 夾爪順時針轉
+                        # 計算並正規化夾爪對齊角度到 [-180, 180]
+                        grip_align_angle = loc[3][0] + 90 + OFFSET["angle"]
+                        grip_align_angle = ((grip_align_angle + 180) % 360) - 180
+                        
                         CLOSE((loc[3][2]+12)/1000)
-                        print(f'夾爪順時針轉{abs(loc[3][0]+90+OFFSET["angle"])}度') # 夾爪要對齊植株介質的角度
+                        time.sleep(0.5)  # 等待夾爪程式完全結束再執行 movej
+
                         posej = rob.getj()
-                        posej[5] = posej[5] + radians(abs(loc[3][0]+90+OFFSET["angle"]))
+                        if grip_align_angle < 0:
+                            print(f'夾爪順時針轉{abs(grip_align_angle)}度') # 夾爪要對齊植株介質的角度
+                            posej[5] = posej[5] + radians(abs(grip_align_angle))
+                        elif grip_align_angle > 0:
+                            print(f'夾爪逆時針轉{abs(grip_align_angle)}度') # 夾爪要對齊植株介質的角度
+                            posej[5] = posej[5] - radians(abs(grip_align_angle))
                         rob.movej((posej[0],
                                     posej[1],
                                     posej[2],
                                     posej[3],
                                     posej[4],
-                                    posej[5]),acc,vel)  #校正角度
+                                    posej[5]),acc,vel)
                         # time.sleep(5)
                         posel_R = rob.getl()
                         rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.29+OFFSET["z"], posel_R[3], posel_R[4], posel_R[5]), 1, 0.1) # 插下去
                         
                         CLOSE(((loc[3][2]+12)/1000)*0.7)
+                        rob.movel((B_temp[0]+OFFSET["x"], B_temp[1]+OFFSET["y"], 0.484763, 0, 3.1271, 0), 1, 0.1) # 移動到蘭花中心
+
+
                         # 將帶病徵蘭花移到收集點
-                        rob.movej((radians(15.17),
-                                    radians(-59.64),
-                                    radians(-124.58),             # 負的向下
-                                    radians(-84.99),
-                                    radians(88.90),
-                                    radians(105.10)),acc,vel)
+                        rob.movej((radians(-26.15),
+                                    radians(-71.91),
+                                    radians(-106.04),             # 負的向下
+                                    radians(-91.31),
+                                    radians(89.45),
+                                    radians(63.88)),acc,vel)  #校正角度
                         CLOSE(((loc[3][2]+12)/1000)*0.7)
 
                         # 開何使蘭花介質鬆脫
