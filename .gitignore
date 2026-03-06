@@ -3,10 +3,10 @@ __pycache__
 *.__pycache__
 *.pyc
 
-.txt
-.png
-.jpg
-.bmp
+*.txt
+*.png
+*.jpg
+*.bmp
 
-.pt
-.onnx
+*.pt
+*.onnx
