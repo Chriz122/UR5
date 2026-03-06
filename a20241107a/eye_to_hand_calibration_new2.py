@@ -64,7 +64,7 @@ count = 0
 
 for c in [5, 6, 7, 8, 9]:  # 對應 A5 到 A9
     count += 1
-    pic_name = f'a20241107a/20260208_162701/A/A{c}.png'
+    pic_name = f'a20241107a/20260305_113053/A/A{c}.png'
     I = cv2.imread(pic_name)
     if I is None:
         raise ValueError(f"Could not load {pic_name}")
@@ -77,10 +77,13 @@ for c in [5, 6, 7, 8, 9]:  # 對應 A5 到 A9
 
     imagePoints = corners.reshape(-1, 2)
 
+    # findChessboardCorners 角點順序為右下→左上，而 pose.txt 為左上→右下，需反轉
+    imagePoints = imagePoints[::-1].copy()
+
     # 建立網格
     x_mesh, y_mesh = np.meshgrid(np.arange(1, 641), np.arange(1, 481))  # 1:640, 1:480
 
-    txt_name = f'a20241107a/20260208_162701/D/D{c}.txt'
+    txt_name = f'a20241107a/20260305_113053/D/D{c}.txt'
     depth = np.loadtxt(txt_name)
 
     # 尋找非零深度點
